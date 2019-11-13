@@ -1,0 +1,481 @@
+---
+title: "Stat 402 Project 1"
+output:
+  pdf_document: default
+  html_document: default
+author : Prakul Asthana
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## About the Dataset
+This data approach student achievement in secondary education of two Portuguese schools. The data attributes include student grades, demographic, social and school related features) and it was collected by using school reports and questionnaires. Two datasets are provided regarding the performance in two distinct subjects: Mathematics (mat) and Portuguese language (por). In [Cortez and Silva, 2008], the two datasets were modeled under binary/five-level classification and regression tasks. Important note: the target attribute G3 has a strong correlation with attributes G2 and G1. This occurs because G3 is the final year grade (issued at the 3rd period), while G1 and G2 correspond to the 1st and 2nd period grades. It is more difficult to predict G3 without G2 and G1, but such prediction is much more useful (see paper source for more details).
+
+## Codebook
+### Attributes for both student-mat.csv (Math course) and student-por.csv (Portuguese language course) datasets:
+1 school - student's school (binary: 'GP' - Gabriel Pereira or 'MS' - Mousinho da Silveira)
+
+2 sex - student's sex (binary: 'F' - female or 'M' - male)
+
+3 age - student's age (numeric: from 15 to 22)
+
+4 address - student's home address type (binary: 'U' - urban or 'R' - rural)
+
+5 famsize - family size (binary: 'LE3' - less or equal to 3 or 'GT3' - greater than 3)
+6 Pstatus - parent's cohabitation status (binary: 'T' - living together or 'A' - apart)
+
+7 Medu - mother's education (numeric: 0 - none, 1 - primary education (4th grade), 2 â€“ 5th to 9th grade, 3 â€“ secondary education or 4 â€“ higher education)
+
+8 Fedu - father's education (numeric: 0 - none, 1 - primary education (4th grade), 2 â€“ 5th to 9th grade, 3 â€“ secondary education or 4 â€“ higher education)
+
+9 Mjob - mother's job (nominal: 'teacher', 'health' care related, civil 'services' (e.g. administrative or police), 'at_home' or 'other')
+
+10 Fjob - father's job (nominal: 'teacher', 'health' care related, civil 'services' (e.g. administrative or police), 'at_home' or 'other')
+
+11 reason - reason to choose this school (nominal: close to 'home', school 'reputation', 'course' preference or 'other')
+
+12 guardian - student's guardian (nominal: 'mother', 'father' or 'other')
+
+13 traveltime - home to school travel time (numeric: 1 - <15 min., 2 - 15 to 30 min., 3 - 30 min. to 1 hour, or 4 - >1 hour)
+
+14 studytime - weekly study time (numeric: 1 - <2 hours, 2 - 2 to 5 hours, 3 - 5 to 10 hours, or 4 - >10 hours)
+
+15 failures - number of past class failures (numeric: n if 1<=n<3, else 4)
+
+16 schoolsup - extra educational support (binary: yes or no)
+
+17 famsup - family educational support (binary: yes or no)
+
+18 paid - extra paid classes within the course subject (Math or Portuguese)(binary: yes or no)
+
+19 activities - extra-curricular activities (binary: yes or no)
+
+20 nursery - attended nursery school (binary: yes or no)
+
+21 higher - wants to take higher education (binary: yes or no)
+
+22 internet - Internet access at home (binary: yes or no)
+
+23 romantic - with a romantic relationship (binary: yes or no)
+
+24 famrel - quality of family relationships (numeric: from 1 - very bad to 5 - excellent)
+
+25 freetime - free time after school (numeric: from 1 - very low to 5 - very high)
+
+26 goout - going out with friends (numeric: from 1 - very low to 5 - very high)
+
+27 Dalc - workday alcohol consumption (numeric: from 1 - very low to 5 - very high)
+
+28 Walc - weekend alcohol consumption (numeric: from 1 - very low to 5 - very high)
+
+29 health - current health status (numeric: from 1 - very bad to 5 - very good)
+
+30 absences - number of school absences (numeric: from 0 to 93)
+
+### these grades are related with the course subject, Math or Portuguese:
+31 G1 - first period grade (numeric: from 0 to 20)
+31 G2 - second period grade (numeric: from 0 to 20)
+32 G3 - final grade (numeric: from 0 to 20, output target)
+
+## Source
+UCI - https://archive.ics.uci.edu/ml/datasets/Student+Performance
+Paper - P. Cortez and A. Silva. Using Data Mining to Predict Secondary School Student Performance. In A. Brito and J. Teixeira Eds., Proceedings of 5th FUture BUsiness TEChnology Conference (FUBUTEC 2008) pp. 5-12, Porto, Portugal, April, 2008, EUROSIS, ISBN 978-9077381-39-7.
+
+------------------------------------------------------------------------------
+
+## Loading dataset
+
+```{r Loading Dataset}
+math_data = read.table("student-mat.csv",sep=";",header=TRUE)
+lang_data = read.table("student-por.csv",sep=";",header=TRUE)
+
+```
+
+### Some ordinal variables are being read as numerical, changing them to factors
+```{r Converting columns to factors}
+library(tidyverse)
+ordinal_var = c("Medu","Fedu","traveltime","studytime","famrel","freetime","goout","Dalc","Walc","health","failures")
+lang_data <- lang_data %>% mutate_if(colnames(lang_data) %in% ordinal_var, as.factor)
+math_data <- math_data %>% mutate_if(colnames(math_data) %in% ordinal_var, as.factor)
+```
+
+### Exploring Math data
+```{r math summary}
+summary(math_data)
+```
+
+### Exploring Language data
+```{r language summary}
+summary(lang_data)
+```
+### Cheecking datatypes
+```{r checking column datatypes}
+data.frame(unlist(lapply(lang_data, class)))
+data.frame(unlist(lapply(math_data, class)))
+```
+
+## Checing correlation of G1,G2,G3
+```{r Creating finalgrade column}
+print("Maths Scores")
+cor(math_data[c("G1","G2","G3")])
+print("Language Scores")
+cor(lang_data[c("G1","G2","G3")])
+
+print("As G3 is final grade and G1, G2 are term one and two grades")
+print("We calculate finalgrade = (G1 + G2 + 2*G3)/4")
+
+math_data$outcome <- (math_data$G1 + math_data$G2 + 2*math_data$G3)/4
+lang_data$outcome <- (lang_data$G1 + lang_data$G2 + 2*lang_data$G3)/4
+
+# Remove G1,G2,G3 data
+math_data <- subset(math_data, select = -c(G1,G2,G3))
+lang_data <- subset(lang_data, select = -c(G1,G2,G3))
+```
+
+# Checking distributions variable wise
+
+## Gender vs School
+```{r Gender distribution across schools and subjects}
+print("Math Data distribution")
+table(math_data$sex,math_data$school)
+print("Language data distribution")
+table(lang_data$sex,lang_data$school)
+```
+
+## Checking  distrubtions of numerical variables
+### Age
+#### Math
+```{r Math Age distribution}
+library(ggplot2)
+library(gridExtra)
+
+histogram <- ggplot(math_data, aes(x=age))  + geom_histogram(bins = 10) + labs(title="Histogram of Age",x="Age") + theme(plot.title = element_text(hjust = 0.5))
+
+box_plot <- ggplot(math_data, aes(y=age)) + 
+  geom_boxplot(outlier.colour="red", outlier.shape=8,
+                outlier.size=1) + labs(title="Box plot of Age",y="Age") + theme(plot.title = element_text(hjust = 0.5))
+
+qq_plot <- ggplot(math_data, aes(sample=age)) + geom_qq() + labs(title="QQ Plot of Age",x="Age") + theme(plot.title = element_text(hjust = 0.5)) + geom_qq_line()
+
+grid.arrange(histogram, box_plot, qq_plot, nrow = 1)
+```
+
+We need to drop the one observation of 22 year old student as it is an outlier.
+
+```{r Math Age outlier removal}
+math_data <- subset(math_data, age != 22)
+```
+
+#### Language
+
+```{r Language age distribution}
+histogram <- ggplot(lang_data, aes(x=age))  + geom_histogram(bins = 10) + labs(title="Histogram of Age",x="Age") + theme(plot.title = element_text(hjust = 0.5))
+
+box_plot <- ggplot(lang_data, aes(y=age)) + 
+  geom_boxplot(outlier.colour="red", outlier.shape=8,
+                 outlier.size=1) + labs(title="Box plot of Age",y="Age") + theme(plot.title = element_text(hjust = 0.5))
+
+qq_plot <- ggplot(lang_data, aes(sample=age)) + geom_qq() + labs(title="QQ Plot of Age",x="Age") + theme(plot.title = element_text(hjust = 0.5)) + geom_qq_line()
+
+grid.arrange(histogram, box_plot, qq_plot, nrow = 1)
+```
+
+Again we see there is an outlier of 22 year old student which we can remove.
+
+```{r Language age outlier removal}
+lang_data <- subset(lang_data, age != 22)
+```
+
+### Absences
+#### Math
+```{r Math Absences distribution}
+histogram <- ggplot(math_data, aes(x=absences))  + geom_histogram(bins = 10) + labs(title="Histogram of Absences",x="Absences") + theme(plot.title = element_text(hjust = 0.5))
+
+box_plot <- ggplot(math_data, aes(y=absences)) + 
+  geom_boxplot(outlier.colour="red", outlier.shape=8,
+                outlier.size=1) + labs(title="Box plot of Absences",y="Absences") + theme(plot.title = element_text(hjust = 0.5))
+
+qq_plot <- ggplot(math_data, aes(sample=absences)) + geom_qq() + labs(title="QQ Plot of Absences",x="Absences") + theme(plot.title = element_text(hjust = 0.5)) + geom_qq_line()
+
+grid.arrange(histogram, box_plot, qq_plot, nrow = 1)
+```
+
+Absences data is skewed, we can log transform and check again
+log_Absences = log(Absences + 1)
+
+```{r Math Absences transform }
+math_data$absences <- math_data$absences + 1
+math_data$log_absences <- log(math_data$absences)
+math_data <- subset(math_data, select = -c(absences))
+
+histogram <- ggplot(math_data, aes(x=log_absences))  + geom_histogram(bins = 10) + labs(title="Histogram of log(Absences+1)",x="log(Absences+1)") + theme(plot.title = element_text(hjust = 0.5))
+
+box_plot <- ggplot(math_data, aes(y=log_absences)) + 
+  geom_boxplot(outlier.colour="red", outlier.shape=8,
+                outlier.size=1) + labs(title="Box plot of log(Absences+1)",y="log(Absences+1)") + theme(plot.title = element_text(hjust = 0.5))
+
+qq_plot <- ggplot(math_data, aes(sample=log_absences)) + geom_qq() + labs(title="QQ Plot of log(Absences+1)",x="log(Absences+1)") + theme(plot.title = element_text(hjust = 0.5)) + geom_qq_line()
+
+grid.arrange(histogram, box_plot, qq_plot, nrow = 1)
+```
+
+#### Language
+```{r Language Absences distribution}
+
+histogram <- ggplot(lang_data, aes(x=absences))  + geom_histogram(bins = 10) + labs(title="Histogram of Absences",x="Absences") + theme(plot.title = element_text(hjust = 0.5))
+
+box_plot <- ggplot(lang_data, aes(y=absences)) + 
+  geom_boxplot(outlier.colour="red", outlier.shape=8,
+                outlier.size=1) + labs(title="Box plot of Absences",y="Absences") + theme(plot.title = element_text(hjust = 0.5))
+
+qq_plot <- ggplot(lang_data, aes(sample=absences)) + geom_qq() + labs(title="QQ Plot of Absences",x="Absences") + theme(plot.title = element_text(hjust = 0.5)) + geom_qq_line()
+
+grid.arrange(histogram, box_plot, qq_plot, nrow = 1)
+```
+
+Absences data is skewed, we can log transform and check again
+log_Absences = log(Absences + 1)
+
+```{r Language absences transform}
+lang_data$absences <- lang_data$absences + 1
+lang_data$log_absences <- log(lang_data$absences)
+lang_data <- subset(lang_data, select = -c(absences))
+
+histogram <- ggplot(lang_data, aes(x=log_absences))  + geom_histogram(bins = 10) + labs(title="Histogram of log(Absences+1)",x="log(Absencesv)") + theme(plot.title = element_text(hjust = 0.5))
+
+box_plot <- ggplot(lang_data, aes(y=log_absences)) + 
+  geom_boxplot(outlier.colour="red", outlier.shape=8,
+                outlier.size=1) + labs(title="Box plot of log(Absences+1)",y="log(Absences+1)") + theme(plot.title = element_text(hjust = 0.5))
+
+qq_plot <- ggplot(lang_data, aes(sample=log_absences)) + geom_qq() + labs(title="QQ Plot of log(Absences+1)",x="log(Absences+1)") + theme(plot.title = element_text(hjust = 0.5)) + geom_qq_line()
+
+grid.arrange(histogram, box_plot, qq_plot, nrow = 1)
+```
+
+### Outcome = 2*(G1 + G2 + 2*G3)/4
+#### Math
+
+```{r Math Outcome distribution}
+histogram <- ggplot(math_data, aes(x=outcome))  + geom_histogram(bins = 10) + labs(title="Histogram of Outcome",x="Outcome") + theme(plot.title = element_text(hjust = 0.5))
+
+box_plot <- ggplot(math_data, aes(y=outcome)) + 
+  geom_boxplot(outlier.colour="red", outlier.shape=8,
+                outlier.size=1) + labs(title="Box plot of Outcome",y="Outcome") + theme(plot.title = element_text(hjust = 0.5))
+
+qq_plot <- ggplot(math_data, aes(sample=outcome)) + geom_qq() + labs(title="QQ Plot of Outcome",x="Outcome") + theme(plot.title = element_text(hjust = 0.5)) + geom_qq_line()
+
+grid.arrange(histogram, box_plot, qq_plot, nrow = 1)
+```
+Looks normally distributed
+
+#### Language
+
+```{r Language Outcome distribution}
+histogram <- ggplot(lang_data, aes(x=outcome))  + geom_histogram(bins = 10) + labs(title="Histogram of Outcome",x="Outcome") + theme(plot.title = element_text(hjust = 0.5))
+
+box_plot <- ggplot(lang_data, aes(y=outcome)) + 
+  geom_boxplot(outlier.colour="red", outlier.shape=8,
+                outlier.size=1) + labs(title="Box plot of Outcome",y="Outcome") + theme(plot.title = element_text(hjust = 0.5))
+
+qq_plot <- ggplot(lang_data, aes(sample=outcome)) + geom_qq() + labs(title="QQ Plot of Outcome",x="Outcome") + theme(plot.title = element_text(hjust = 0.5)) + geom_qq_line()
+
+grid.arrange(histogram, box_plot, qq_plot, nrow = 1)
+```
+
+There are some outliers on low end,but we can proceed forward for now due to smooth QQ Plot.
+
+
+### Checking frequency distribution of categorical variables and collapsing levels
+```{r}
+library(car)
+print("Medu : 0+1,2,3,4") 
+math_data$Medu <- recode(math_data$Medu, "c(0, 1)='0+1'")
+lang_data$Medu <- recode(lang_data$Medu, "c(0, 1)='0+1'")
+
+print("Fedu : 0+1,2,3,4") 
+math_data$Fedu <- recode(math_data$Fedu, "c(0, 1)='0+1'")
+lang_data$Fedu <- recode(lang_data$Fedu, "c(0, 1)='0+1'")
+
+print("traveltime : 1,2,3+4") 
+math_data$traveltime <- recode(math_data$traveltime, "c(3, 4)='3+4'")
+lang_data$traveltime <- recode(lang_data$traveltime, "c(3, 4)='3+4'")
+
+print("studytime : 1,2,3+4")
+math_data$studytime <- recode(math_data$studytime, "c(3, 4)='3+4'")
+lang_data$studytime <- recode(lang_data$studytime, "c(3, 4)='3+4'")
+
+print("failures : 0,1+2+3+4")
+math_data$failures <- recode(math_data$failures, "c(1, 2, 3, 4)='1+2+3+4'")
+lang_data$failures <- recode(lang_data$failures, "c(1, 2, 3, 4)='1+2+3+4'")
+
+print("famrel : 1+2+3,4,5")
+math_data$famrel <- recode(math_data$famrel, "c(1, 2, 3)='1+2+3'")
+lang_data$famrel <- recode(lang_data$famrel, "c(1, 2, 3)='1+2+3'")
+
+print("freetime : 1+2,3,4+5")
+math_data$freetime <- recode(math_data$freetime, "c(1, 2)='1+2';c(4, 5)='4+5'")
+lang_data$freetime <- recode(lang_data$freetime, "c(1, 2)='1+2';c(4, 5)='4+5'")
+
+print("goout : 1+2,3,4+5")
+math_data$goout <- recode(math_data$goout, "c(1, 2)='1+2';c(4, 5)='4+5'")
+lang_data$goout <- recode(lang_data$goout, "c(1, 2)='1+2';c(4, 5)='4+5'")
+
+print("Dalc : 1,2,3+4+5")
+math_data$Dalc <- recode(math_data$Dalc, "c(3, 4, 5)='3+4+5'")
+lang_data$Dalc <- recode(lang_data$Dalc, "c(3, 4, 5)='3+4+5'")
+
+print("Walc : 1,2+3,4+5")
+math_data$Walc <- recode(math_data$Walc, "c(2, 3)='2+3';c(4, 5)='4+5'")
+lang_data$Walc <- recode(lang_data$Walc, "c(2, 3)='2+3';c(4, 5)='4+5'")
+
+print("health : 1+2+3,4+5")
+math_data$health <- recode(math_data$health, "c(1, 2, 3)='1+2+3';c(4, 5)='4+5'")
+lang_data$health <- recode(lang_data$health, "c(1, 2, 3)='1+2+3';c(4, 5)='4+5'")
+```
+
+## Checking multi-collinearity for numemrical variables
+### Math
+```{r}
+cor(math_data[c("age","log_absences","outcome")],use="complete.obs")
+```
+### Language
+```{r}
+cor(lang_data[c("age","log_absences","outcome")],use="complete.obs")
+```
+
+## Final visualization of dataset after EDA
+```{r}
+print("Math")
+summary(math_data)
+```
+
+```{r}
+print("Language")
+summary(math_data)
+```
+
+
+## Checking for variation in scores across school
+```{r t-test with school}
+print("Maths t-test")
+t.test(outcome~school, data = math_data)
+print("Language t-test")
+t.test(outcome~school, data = lang_data)
+```
+For Maths, we get a high p-value of 0.39, hence Maths scores are almost similar across both schools.
+
+For Portuguese we get low p-value of almost 0, hence Portuguese scores are different across both schools. So we should slice the Portuguese data schoolwise, and build individual models.
+
+### Slicing data set on school basis
+```{r Slicing data schoolwise}
+# gp_math <- subset(math_data, school == "GP")
+gp_lang <- subset(lang_data, school == "GP")
+gp_lang <- subset(gp_lang, select = -c(school))
+# ms_math <- subset(math_data, school == "MS")
+ms_lang <- subset(lang_data, school == "MS")
+ms_lang <- subset(ms_lang, select = -c(school))
+```
+
+## Building stepwise models
+
+### Math
+```{r}
+library(olsrr)
+# stepwise regression
+print("Both : Forward and Backward selection")
+model_math <- lm(outcome ~ ., data = math_data)
+both_model_math <- ols_step_both_p(model_math, prem=0.1)
+both_model_math
+```
+
+```{r}
+plot(both_model_math)
+summary(both_model_math$model)
+```
+```{r}
+plot(both_model_math$model)
+vif(both_model_math$model)
+```
+
+
+#### Making final Math model using result of stepwise selection
+```{r}
+# Stepwise selection included 12 predictor variables
+# This may lead to overfitting. Lets make a linear model with top 10 features used by stepwise regression
+
+final_model_math <- lm(outcome ~ failures + Mjob + log_absences + goout + sex + freetime + studytime + famsup + schoolsup, data = math_data)
+summary(final_model_math)
+plot(final_model_math)
+ncvTest(final_model_math)
+vif(final_model_math)
+```
+
+### Language - GP
+```{r echo=TRUE}
+# stepwise regression
+print("Both : Forward and Backward selection")
+model_gp_lang <- lm(outcome ~ ., data = gp_lang)
+both_model_gp_lang <- ols_step_both_p(model_gp_lang)
+both_model_gp_lang
+```
+
+```{r}
+plot(both_model_gp_lang)
+summary(both_model_gp_lang$model)
+```
+
+### Final GP Language model
+```{r}
+# Stepwise selection included 12 predictor variables
+# This may lead to overfitting. Lets make a linear model with top 10 features used by stepwise regression
+
+final_model_lang_gp <- lm(outcome ~ failures + higher + Walc + sex + log_absences + Medu + reason + age + goout*romantic, data = gp_lang)
+summary(final_model_lang_gp)
+plot(final_model_lang_gp)
+ncvTest(final_model_lang_gp)
+vif(final_model_lang_gp)
+```
+
+NCV of model is 0.001, but since we have large number of samples, we are good.
+
+### Language - MS
+```{r}
+# stepwise regression
+print("Both :n Forward and Backward selection")
+model_ms_lang <- lm(outcome ~ ., data = ms_lang)
+both_model_ms_lang <- ols_step_both_p(model_ms_lang)
+both_model_ms_lang
+```
+
+
+```{r}
+plot(both_model_ms_lang)
+summary(both_model_ms_lang$model)
+```
+
+```{r}
+# Stepwise selection included 12 predictor variables
+# This may lead to overfitting. Lets make a linear model with top 10 features used by stepwise regression
+
+final_model_lang_ms <- lm(outcome ~ failures + higher + famrel + studytime + Fedu + guardian + sex, data = ms_lang)
+summary(final_model_lang_ms)
+plot(final_model_lang_ms)
+ncvTest(final_model_lang_ms)
+vif(final_model_lang_ms)
+```
+
+### Diagnostic
+
+```{r}
+influencePlot(final_model_math)
+influencePlot(final_model_lang_gp)
+influencePlot(final_model_lang_ms)
+
+```
+
+
+
+
+
