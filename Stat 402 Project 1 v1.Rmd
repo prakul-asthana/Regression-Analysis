@@ -288,6 +288,22 @@ There are some outliers on low end,but we can proceed forward for now due to smo
 
 
 ### Checking frequency distribution of categorical variables and collapsing levels
+#### Checking Contigency tables
+```{r}
+  categorical_variables <- c("sex","address","famsize","Fedu","Medu","Mjob","Fjob","reason","guardian","traveltime","studytime","failures","schoolsup","famsup","paid","activities","nursery","higher","internet","romantic","famrel","freetime","goout","Dalc","Walc","health","absences")
+
+for(i in seq(1:length(categorical_variables))){
+  col <- categorical_variables[i]
+  print(col)
+  tab <- table(math_data[[col]]) 
+  write.table(tab, "filename.csv", col.names=TRUE, sep=",", append=TRUE)
+  print(tab)  
+}
+
+```
+
+
+
 ```{r}
 library(car)
 print("Medu : 0+1,2,3,4") 
@@ -333,6 +349,17 @@ lang_data$Walc <- recode(lang_data$Walc, "c(2, 3)='2+3';c(4, 5)='4+5'")
 print("health : 1+2+3,4+5")
 math_data$health <- recode(math_data$health, "c(1, 2, 3)='1+2+3';c(4, 5)='4+5'")
 lang_data$health <- recode(lang_data$health, "c(1, 2, 3)='1+2+3';c(4, 5)='4+5'")
+```
+
+#### Checking distribution again
+```{r}
+for(i in seq(1:length(categorical_variables))){
+  col <- categorical_variables[i]
+  print(col)
+  tab <- table(math_data[[col]]) 
+  write.table(tab, "filename.csv", col.names=TRUE, sep=",", append=TRUE)
+  print(tab)  
+}
 ```
 
 ## Checking multi-collinearity for numemrical variables
@@ -472,9 +499,20 @@ vif(final_model_lang_ms)
 influencePlot(final_model_math)
 influencePlot(final_model_lang_gp)
 influencePlot(final_model_lang_ms)
-
 ```
 
+# Cross Validation
+```{r}
+library(caret)
+math_cv <- train(outcome ~ failures + Mjob + log_absences + goout + sex + freetime + studytime + famsup + schoolsup,
+                  data = math_data, 
+                  method = "lm",
+                  trControl=trainControl(
+                    method = "cv",
+                    number=5,
+                    savePredictions = TRUE)
+)
+```
 
 
 
